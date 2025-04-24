@@ -1,14 +1,14 @@
-openapi: "3.0.3"
+openapi: "3.1.0"
 info:
-  title: "Application API"
-  description: "Application API"
+  title: "realword ktor API"
+  description: "realword ktor API"
   version: "1.0.0"
 servers:
-  - url: "http://0.0.0.0:8080"
+  - url: "http://localhost:8080"
 paths:
-  /:
+  /whatsup:
     get:
-      description: "Hello World!"
+      description: ""
       responses:
         "200":
           description: "OK"
@@ -18,6 +18,4 @@ paths:
                 type: "string"
               examples:
                 Example#1:
-                  value: "Hello World!"
-components:
-  schemas: { }
+                  value: "What's up motherfuckers?"
