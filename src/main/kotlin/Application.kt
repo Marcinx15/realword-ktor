@@ -16,7 +16,20 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    install(ContentNegotiation) { json() }
+    installContentNegotiation()
+    installDocs()
+    configureRouting()
+}
+
+private fun Application.configureRouting() {
+    routing {
+        route(path = "api") { openApi() }
+        route(path = "docs") { swaggerUI(openApiUrl = "/api") }
+        userRoutes()
+    }
+}
+
+private fun Application.installDocs() {
     install(plugin = OpenApi) {
         outputFormat = OutputFormat.YAML
         server {
@@ -29,13 +42,10 @@ fun Application.module() {
             version = "1.0.0"
         }
     }
-    configureRouting()
 }
 
-fun Application.configureRouting() {
-    routing {
-        route(path = "api") { openApi() }
-        route(path = "docs") { swaggerUI(openApiUrl = "/api") }
-        userRoutes()
-    }
+private fun Application.installContentNegotiation() {
+    install(ContentNegotiation) { json() }
 }
+
+
