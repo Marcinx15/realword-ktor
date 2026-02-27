@@ -1,7 +1,15 @@
-val kotlin_version: String by project
-val logback_version: String by project
-val postgres_version: String by project
-val smiley4_version: String by project
+group = "com.example"
+version = "0.0.1"
+
+val kotlinVersion = "2.1.10"
+val ktorVersion = "3.1.2"
+val logbackVersion = "1.4.14"
+val postgresVersion = "42.7.5"
+val smiley4Version = "5.0.2"
+val exposedVersion = "1.0.0-rc-4"
+val jbcryptVersion = "0.4"
+val flywayVersion = "12.0.2"
+
 
 plugins {
     kotlin("jvm") version "2.1.10"
@@ -9,8 +17,6 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization") version "2.1.10"
 }
 
-group = "com.example"
-version = "0.0.1"
 
 application {
     mainClass = "io.ktor.server.netty.EngineMain"
@@ -28,12 +34,24 @@ dependencies {
     implementation("io.ktor:ktor-server-swagger")
     implementation("io.ktor:ktor-server-content-negotiation")
     implementation("io.ktor:ktor-serialization-kotlinx-json")
-    implementation("org.postgresql:postgresql:$postgres_version")
     implementation("io.ktor:ktor-server-netty")
-    implementation("ch.qos.logback:logback-classic:$logback_version")
     implementation("io.ktor:ktor-server-config-yaml")
-    implementation("io.github.smiley4:ktor-openapi:$smiley4_version")
-    implementation("io.github.smiley4:ktor-swagger-ui:$smiley4_version")
     testImplementation("io.ktor:ktor-server-test-host")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
+
+    implementation("org.postgresql:postgresql:$postgresVersion")
+    implementation("com.zaxxer:HikariCP:7.0.2")
+    implementation("org.flywaydb:flyway-core:$flywayVersion")
+    runtimeOnly("org.flywaydb:flyway-database-postgresql:$flywayVersion")
+    implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
+
+
+    implementation("ch.qos.logback:logback-classic:$logbackVersion")
+
+    implementation("io.github.smiley4:ktor-openapi:$smiley4Version")
+    implementation("io.github.smiley4:ktor-swagger-ui:$smiley4Version")
+
+    implementation("org.mindrot:jbcrypt:${jbcryptVersion}")
+
+    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
+
 }

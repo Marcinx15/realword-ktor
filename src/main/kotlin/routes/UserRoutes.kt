@@ -1,7 +1,8 @@
 package com.example.routes
 
-import com.example.model.UserRequest
-import com.example.model.UserResponse
+import com.example.routes.dto.RegisterUserRequest
+import com.example.routes.dto.UserResponse
+import com.example.services.UserService
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.post
 import io.ktor.http.HttpStatusCode
@@ -9,9 +10,9 @@ import io.ktor.server.routing.Route
 import io.github.smiley4.ktoropenapi.get
 import io.ktor.server.response.respond
 
-fun Route.userRoutes() {
-    post<UserRequest>(path = "/api/users", builder = postUserDocs) { user ->
-        println(user)
+fun Route.userRoutes(userService: UserService) {
+    post<RegisterUserRequest>(path = "/api/users", builder = postUserDocs) {
+        userService.registerUser(it)
         call.respond(
             UserResponse(
                 email = "marcin@gmail.com",
@@ -39,7 +40,7 @@ fun Route.userRoutes() {
 private val postUserDocs: RouteConfig.() -> Unit = {
     tags = listOf("user")
     description = "Register user"
-    request { body<UserRequest>() }
+    request { body<RegisterUserRequest>() }
     response {
         HttpStatusCode.OK to {
             description = "Success"
