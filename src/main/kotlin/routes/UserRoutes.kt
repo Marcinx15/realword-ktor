@@ -1,5 +1,6 @@
 package com.example.routes
 
+import com.example.model.UserId
 import com.example.routes.dto.RegisterUserRequest
 import com.example.routes.dto.UserResponse
 import com.example.services.UserService
@@ -8,32 +9,42 @@ import io.github.smiley4.ktoropenapi.post
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.routing.Route
 import io.github.smiley4.ktoropenapi.get
+import io.ktor.http.HttpHeaders
+import io.ktor.http.auth.HttpAuthHeader
+import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.parseAuthorizationHeader
+import io.ktor.server.auth.principal
 import io.ktor.server.response.respond
 
 fun Route.userRoutes(userService: UserService) {
     post<RegisterUserRequest>(path = "/api/users", builder = postUserDocs) {
-        userService.registerUser(it)
-        call.respond(
+        val response = userService.registerUser(it).let { result ->
             UserResponse(
-                email = "marcin@gmail.com",
-                token = "123456789",
-                username = "marcin123",
-                bio = "whatever",
-                image = "pretty boy"
+                email = result.user.email.value,
+                token = result.token.value,
+                username = result.user.username.value,
+                bio = null,
+                image = null
             )
-        )
+        }
+        call.respond(HttpStatusCode.Created, response)
     }
 
-    get(path = "/api/user", builder = getUserDocs) {
-        call.respond(
-            UserResponse(
-                email = "marcin@gmail.com",
-                token = "123456789",
-                username = "marcin123",
-                bio = "whatever",
-                image = "pretty boy elo"
-            )
-        )
+    authenticate {
+        get(path = "/api/user", builder = getUserDocs) {
+            val userId = call.principal<UserId>()!!
+            val token = (call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single)?.blob!!
+            val response = userService.getUserData(userId).let { user ->
+                UserResponse(
+                    email = user.email.value,
+                    token = token,
+                    username = user.username.value,
+                    bio = user.bio,
+                    image = user.image
+                )
+            }
+            call.respond(HttpStatusCode.OK, response)
+        }
     }
 }
 
@@ -42,11 +53,9 @@ private val postUserDocs: RouteConfig.() -> Unit = {
     description = "Register user"
     request { body<RegisterUserRequest>() }
     response {
-        HttpStatusCode.OK to {
+        HttpStatusCode.Created to {
             description = "Success"
-            body<UserResponse> {
-                description = "The result of the operation"
-            }
+            body<UserResponse> { }
         }
         HttpStatusCode.BadRequest to {
             description = "An invalid request"
