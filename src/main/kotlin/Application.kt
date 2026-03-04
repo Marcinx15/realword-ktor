@@ -6,6 +6,7 @@ import com.example.model.UserId
 import com.example.persistence.UserRepo
 import com.example.routes.userRoutes
 import com.example.services.JwtService
+import com.example.services.JwtToken
 import com.example.services.UserService
 import com.typesafe.config.ConfigFactory
 import com.zaxxer.hikari.HikariDataSource
@@ -16,11 +17,12 @@ import io.github.smiley4.ktoropenapi.config.OutputFormat
 import io.github.smiley4.ktoropenapi.openApi
 import io.github.smiley4.ktoropenapi.route
 import io.github.smiley4.ktorswaggerui.swaggerUI
+import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.*
 import io.ktor.server.auth.Authentication
-import io.ktor.server.auth.authentication
 import io.ktor.server.auth.jwt.jwt
+import io.ktor.server.auth.parseAuthorizationHeader
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
@@ -85,6 +87,9 @@ private fun Application.installContentNegotiation() {
     install(ContentNegotiation) { json() }
 }
 
+
+data class JwtPrincipal(val userId: UserId, val token: JwtToken)
+
 private fun Application.installAuthentication() {
     val jwtVerifier = Dependencies.config.jwt.let {
         JWT.require(Algorithm.HMAC256(it.secret))
@@ -98,8 +103,11 @@ private fun Application.installAuthentication() {
             authSchemes("Token", "Bearer")
             verifier(jwtVerifier)
             validate { credential ->
-                val subject = credential.subject?.toIntOrNull()
-                subject?.let { UserId(it) }
+                val userId = credential.subject?.toIntOrNull()?.let { UserId(it) }
+                val token = (request.parseAuthorizationHeader() as? HttpAuthHeader.Single)?.blob
+
+                if (userId != null && token != null) JwtPrincipal(userId, JwtToken(token))
+                else null
             }
         }
     }

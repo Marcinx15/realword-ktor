@@ -10,6 +10,7 @@ val exposedVersion = "1.0.0-rc-4"
 val jbcryptVersion = "0.4"
 val flywayVersion = "12.0.2"
 val kotlinxSerializationVersion = "1.10.0"
+val arrowVersion = "2.2.1.1"
 
 
 plugins {
@@ -27,6 +28,11 @@ repositories {
     mavenCentral()
 }
 
+tasks.test {
+    environment["JWT_SECRET"] = "jwt-secret-key"
+    environment["POSTGRES_USER_PASSWORD"] = "postgres-user-password"
+}
+
 dependencies {
     implementation("io.ktor:ktor-server-core")
     implementation("io.ktor:ktor-server-swagger")
@@ -40,13 +46,13 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-hocon:$kotlinxSerializationVersion")
 
-
     implementation("org.postgresql:postgresql:$postgresVersion")
     implementation("com.zaxxer:HikariCP:7.0.2")
     implementation("org.flywaydb:flyway-core:$flywayVersion")
     runtimeOnly("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
 
+    implementation("io.arrow-kt:arrow-core:$arrowVersion")
 
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
 

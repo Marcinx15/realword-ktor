@@ -1,61 +1,80 @@
 package com.example.routes
 
-import com.example.model.UserId
+
+import com.example.JwtPrincipal
+import com.example.model.Email
+import com.example.model.Username
+import com.example.routes.dto.LoginRequest
 import com.example.routes.dto.RegisterUserRequest
 import com.example.routes.dto.UserResponse
+import com.example.routes.dto.toUserResponse
+import com.example.services.IncorrectPassword
+import com.example.services.UserNotFound
 import com.example.services.UserService
+import com.example.services.UserWithToken
+
 import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.post
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.routing.Route
 import io.github.smiley4.ktoropenapi.get
-import io.ktor.http.HttpHeaders
-import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.server.auth.authenticate
-import io.ktor.server.auth.parseAuthorizationHeader
 import io.ktor.server.auth.principal
 import io.ktor.server.response.respond
 
 fun Route.userRoutes(userService: UserService) {
-    post<RegisterUserRequest>(path = "/api/users", builder = postUserDocs) {
-        val response = userService.registerUser(it).let { result ->
-            UserResponse(
-                email = result.user.email.value,
-                token = result.token.value,
-                username = result.user.username.value,
-                bio = null,
-                image = null
-            )
-        }
+    post<RegisterUserRequest>(path = "/api/users", builder = registerUserDocs) {
+        val response = userService.registerUser(
+            Username(it.username),
+            Email(it.email),
+            it.password
+        ).toUserResponse()
+
         call.respond(HttpStatusCode.Created, response)
     }
 
-    authenticate {
-        get(path = "/api/user", builder = getUserDocs) {
-            val userId = call.principal<UserId>()!!
-            val token = (call.request.parseAuthorizationHeader() as? HttpAuthHeader.Single)?.blob!!
-            val response = userService.getUserData(userId).let { user ->
-                UserResponse(
-                    email = user.email.value,
-                    token = token,
-                    username = user.username.value,
-                    bio = user.bio,
-                    image = user.image
-                )
+    post<LoginRequest>(path = "/api/users/login", builder = loginDocs) {
+        val response = userService.login(Email(it.email), it.password)
+        response.fold(
+            ifLeft = { error ->
+                when (error) {
+                    is UserNotFound -> call.respond(HttpStatusCode.NotFound)
+                    is IncorrectPassword -> call.respond(HttpStatusCode.Unauthorized)
+                }
+            },
+            ifRight = { userWithToken ->
+                call.respond(HttpStatusCode.OK, userWithToken.toUserResponse())
             }
-            call.respond(HttpStatusCode.OK, response)
+        )
+    }
+
+    authenticate {
+        get(path = "/api/user", builder = getCurrentUserDocs) {
+            val (userId, token) = call.principal<JwtPrincipal>()
+                ?: return@get call.respond(HttpStatusCode.Unauthorized)
+
+            userService.getUserData(userId).fold(
+                ifLeft = { call.respond(HttpStatusCode.NotFound) },
+                ifRight = { user ->
+                    call.respond(
+                        status = HttpStatusCode.OK,
+                        message = UserWithToken(user, token).toUserResponse()
+                    )
+                }
+            )
         }
     }
 }
 
-private val postUserDocs: RouteConfig.() -> Unit = {
+
+private val registerUserDocs: RouteConfig.() -> Unit = {
     tags = listOf("user")
     description = "Register user"
     request { body<RegisterUserRequest>() }
     response {
         HttpStatusCode.Created to {
             description = "Success"
-            body<UserResponse> { }
+            body<UserResponse> {}
         }
         HttpStatusCode.BadRequest to {
             description = "An invalid request"
@@ -63,7 +82,19 @@ private val postUserDocs: RouteConfig.() -> Unit = {
     }
 }
 
-private val getUserDocs: RouteConfig.() -> Unit = {
+private val loginDocs: RouteConfig.() -> Unit = {
+    tags = listOf("user")
+    description = "Login"
+    request { body<LoginRequest>() }
+    response {
+        HttpStatusCode.OK to {
+            description = "Success"
+            body<UserResponse> {}
+        }
+    }
+}
+
+private val getCurrentUserDocs: RouteConfig.() -> Unit = {
     tags = listOf("user")
     description = "Get current user"
     response {
