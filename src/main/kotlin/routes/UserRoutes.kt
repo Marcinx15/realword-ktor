@@ -1,15 +1,16 @@
 package com.example.routes
 
-
+import arrow.core.Either
 import com.example.JwtPrincipal
 import com.example.model.Email
+import com.example.model.IncorrectPassword
+import com.example.model.UserError
+import com.example.model.UserNotFound
 import com.example.model.Username
 import com.example.routes.dto.LoginRequest
 import com.example.routes.dto.RegisterUserRequest
 import com.example.routes.dto.UserResponse
 import com.example.routes.dto.toUserResponse
-import com.example.services.IncorrectPassword
-import com.example.services.UserNotFound
 import com.example.services.UserService
 import com.example.services.UserWithToken
 
@@ -21,31 +22,19 @@ import io.github.smiley4.ktoropenapi.get
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
 import io.ktor.server.response.respond
+import io.ktor.server.routing.RoutingContext
 
 fun Route.userRoutes(userService: UserService) {
-    post<RegisterUserRequest>(path = "/api/users", builder = registerUserDocs) {
-        val response = userService.registerUser(
-            Username(it.username),
-            Email(it.email),
-            it.password
-        ).toUserResponse()
-
-        call.respond(HttpStatusCode.Created, response)
+    post<RegisterUserRequest>(path = "/api/users", builder = registerUserDocs) { req ->
+        userService.registerUser(Username(req.username), Email(req.email), req.password)
+            .map { it.toUserResponse() }
+            .respond(HttpStatusCode.Created)
     }
 
-    post<LoginRequest>(path = "/api/users/login", builder = loginDocs) {
-        val response = userService.login(Email(it.email), it.password)
-        response.fold(
-            ifLeft = { error ->
-                when (error) {
-                    is UserNotFound -> call.respond(HttpStatusCode.NotFound)
-                    is IncorrectPassword -> call.respond(HttpStatusCode.Unauthorized)
-                }
-            },
-            ifRight = { userWithToken ->
-                call.respond(HttpStatusCode.OK, userWithToken.toUserResponse())
-            }
-        )
+    post<LoginRequest>(path = "/api/users/login", builder = loginDocs) { req ->
+        userService.login(Email(req.email), req.password)
+            .map { it.toUserResponse() }
+            .respond(HttpStatusCode.OK)
     }
 
     authenticate {
@@ -53,16 +42,25 @@ fun Route.userRoutes(userService: UserService) {
             val (userId, token) = call.principal<JwtPrincipal>()
                 ?: return@get call.respond(HttpStatusCode.Unauthorized)
 
-            userService.getUserData(userId).fold(
-                ifLeft = { call.respond(HttpStatusCode.NotFound) },
-                ifRight = { user ->
-                    call.respond(
-                        status = HttpStatusCode.OK,
-                        message = UserWithToken(user, token).toUserResponse()
-                    )
-                }
-            )
+            userService.getUserData(userId)
+                .map { UserWithToken(it, token).toUserResponse() }
+                .respond(HttpStatusCode.OK)
         }
+    }
+}
+
+context(routingContext: RoutingContext)
+private suspend inline fun <reified T : Any> Either<UserError, T>.respond(status: HttpStatusCode) {
+    routingContext.apply {
+        fold(
+            ifRight = { call.respond(status = status, message = it) },
+            ifLeft = {
+                when (it) {
+                    is UserNotFound -> call.respond(HttpStatusCode.NotFound)
+                    IncorrectPassword -> call.respond(HttpStatusCode.Unauthorized)
+                }
+            }
+        )
     }
 }
 

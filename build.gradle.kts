@@ -28,6 +28,12 @@ repositories {
     mavenCentral()
 }
 
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xcontext-parameters")
+    }
+}
+
 tasks.test {
     environment["JWT_SECRET"] = "jwt-secret-key"
     environment["POSTGRES_USER_PASSWORD"] = "postgres-user-password"
