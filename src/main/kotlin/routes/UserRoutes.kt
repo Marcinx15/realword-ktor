@@ -2,15 +2,17 @@ package com.example.routes
 
 import arrow.core.Either
 import com.example.JwtPrincipal
-import com.example.model.Email
+import com.example.model.DomainError
 import com.example.model.IncorrectPassword
-import com.example.model.UserError
+import com.example.model.InvalidInput
 import com.example.model.UserNotFound
-import com.example.model.Username
+import com.example.routes.dto.InvalidInputResponse
 import com.example.routes.dto.LoginRequest
 import com.example.routes.dto.RegisterUserRequest
 import com.example.routes.dto.UserResponse
 import com.example.routes.dto.toUserResponse
+import com.example.services.LoginCommand
+import com.example.services.RegisterUserCommand
 import com.example.services.UserService
 import com.example.services.UserWithToken
 
@@ -26,13 +28,19 @@ import io.ktor.server.routing.RoutingContext
 
 fun Route.userRoutes(userService: UserService) {
     post<RegisterUserRequest>(path = "/api/users", builder = registerUserDocs) { req ->
-        userService.registerUser(Username(req.username), Email(req.email), req.password)
+        userService.registerUser(
+            RegisterUserCommand(
+                username = req.username,
+                email = req.email,
+                password = req.password
+            )
+        )
             .map { it.toUserResponse() }
             .respond(HttpStatusCode.Created)
     }
 
     post<LoginRequest>(path = "/api/users/login", builder = loginDocs) { req ->
-        userService.login(Email(req.email), req.password)
+        userService.login(LoginCommand(email = req.email, password = req.password))
             .map { it.toUserResponse() }
             .respond(HttpStatusCode.OK)
     }
@@ -50,14 +58,18 @@ fun Route.userRoutes(userService: UserService) {
 }
 
 context(routingContext: RoutingContext)
-private suspend inline fun <reified T : Any> Either<UserError, T>.respond(status: HttpStatusCode) {
+private suspend inline fun <reified T : Any> Either<DomainError, T>.respond(status: HttpStatusCode) {
     routingContext.apply {
         fold(
-            ifRight = { call.respond(status = status, message = it) },
+            ifRight = { call.respond(status, it) },
             ifLeft = {
                 when (it) {
                     is UserNotFound -> call.respond(HttpStatusCode.NotFound)
-                    IncorrectPassword -> call.respond(HttpStatusCode.Unauthorized)
+                    is IncorrectPassword -> call.respond(HttpStatusCode.Unauthorized)
+                    is InvalidInput -> call.respond(
+                        HttpStatusCode.UnprocessableEntity,
+                        InvalidInputResponse.from(it)
+                    )
                 }
             }
         )

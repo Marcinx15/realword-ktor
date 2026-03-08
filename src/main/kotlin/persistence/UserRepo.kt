@@ -13,15 +13,17 @@ import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
-data class UserRecord(val userId: UserId, val user: User, val password: String)
+@JvmInline value class HashedPassword(val value: String)
+data class UserRecord(val userId: UserId, val user: User, val password: HashedPassword)
+
 
 class UserRepo(val db: Database) {
 
-    fun createUser(username: Username, email: Email, passwordHash: String): UserId = transaction(db) {
+    fun createUser(username: Username, email: Email, passwordHash: HashedPassword): UserId = transaction(db) {
         UsersTable.insertAndGetId {
             it[UsersTable.username] = username.value
             it[UsersTable.email] = email.value
-            it[UsersTable.password] = passwordHash
+            it[UsersTable.password] = passwordHash.value
         }
     }.let { UserId(it.value) }
 
@@ -42,14 +44,14 @@ class UserRepo(val db: Database) {
                 UserRecord(
                     userId = UserId(it[UsersTable.id].value),
                     user = it.toUser(),
-                    password = it[UsersTable.password]
+                    password = HashedPassword(it[UsersTable.password])
                 )
             }
     }
 
     private fun ResultRow.toUser(): User = User(
-        username = Username(get(UsersTable.username)),
-        email = Email(get(UsersTable.email)),
+        username = Username.fromDb(get(UsersTable.username)),
+        email = Email.fromDb(get(UsersTable.email)),
         bio = get(UsersTable.bio),
         image = get(UsersTable.image),
     )
