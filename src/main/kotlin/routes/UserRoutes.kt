@@ -6,6 +6,7 @@ import com.example.model.DomainError
 import com.example.model.IncorrectPassword
 import com.example.model.InvalidInput
 import com.example.model.UserNotFound
+import com.example.routes.dto.FieldError
 import com.example.routes.dto.InvalidInputResponse
 import com.example.routes.dto.LoginRequest
 import com.example.routes.dto.RegisterUserRequest
@@ -64,11 +65,19 @@ private suspend inline fun <reified T : Any> Either<DomainError, T>.respond(stat
             ifRight = { call.respond(status, it) },
             ifLeft = {
                 when (it) {
-                    is UserNotFound -> call.respond(HttpStatusCode.NotFound)
-                    is IncorrectPassword -> call.respond(HttpStatusCode.Unauthorized)
                     is InvalidInput -> call.respond(
                         HttpStatusCode.UnprocessableEntity,
                         InvalidInputResponse.from(it)
+                    )
+
+                    is IncorrectPassword -> call.respond(
+                        HttpStatusCode.Unauthorized,
+                        FieldError(fieldName = "credentials", errorMessage = "invalid password")
+                    )
+
+                    is UserNotFound -> call.respond(
+                        HttpStatusCode.NotFound,
+                        FieldError(fieldName = it.byProperty, errorMessage = "user not found")
                     )
                 }
             }

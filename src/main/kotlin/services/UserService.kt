@@ -46,7 +46,7 @@ class UserService(val userRepo: UserRepo, val jwtService: JwtService) {
     fun login(loginCommand: LoginCommand): Either<DomainError, UserWithToken> = either {
         val (email, plainPassword) = loginCommand.validate().bind()
         val userForAuth = userRepo.getUserByEmailForAuth(email)
-        val (userId, user, hashedPassword) = ensureNotNull(userForAuth) { UserNotFound }
+        val (userId, user, hashedPassword) = ensureNotNull(userForAuth) { UserNotFound("email") }
         ensure(BCrypt.checkpw(plainPassword.value, hashedPassword.value)) { IncorrectPassword }
 
         val jwtToken = jwtService.createToken(userId)
@@ -55,7 +55,7 @@ class UserService(val userRepo: UserRepo, val jwtService: JwtService) {
     }
 
     fun getUserData(userId: UserId): Either<UserNotFound, User> = either {
-        ensureNotNull(userRepo.getUserById(userId)) { UserNotFound }
+        ensureNotNull(userRepo.getUserById(userId)) { UserNotFound("userId") }
     }
 
     private fun hashPassword(password: PlainPassword): HashedPassword =

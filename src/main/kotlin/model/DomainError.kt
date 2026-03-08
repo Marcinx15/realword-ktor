@@ -5,7 +5,7 @@ import arrow.core.NonEmptyList
 sealed interface DomainError
 
 sealed interface UserError : DomainError
-object UserNotFound : UserError
+data class UserNotFound(val byProperty: String) : UserError
 object IncorrectPassword : UserError
 
 data class InvalidInput(val validationErrors: NonEmptyList<ValidationError>) : DomainError

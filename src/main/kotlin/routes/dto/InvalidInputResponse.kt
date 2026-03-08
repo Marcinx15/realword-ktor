@@ -5,7 +5,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class InvalidInputResponse(val errors: Map<String, List<String>>) {
-
     companion object {
         fun from(invalidInput: InvalidInput): InvalidInputResponse =
             InvalidInputResponse(
@@ -14,5 +13,13 @@ data class InvalidInputResponse(val errors: Map<String, List<String>>) {
                     valueTransform = { it.message }
                 )
             )
+    }
+}
+
+@Serializable
+class FieldError private constructor(val errors: Map<String, List<String>>) {
+    companion object {
+        operator fun invoke(fieldName: String, errorMessage: String): FieldError =
+            FieldError(mapOf(fieldName to listOf(errorMessage)))
     }
 }
