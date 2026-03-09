@@ -3,9 +3,11 @@ package com.example.routes
 import arrow.core.Either
 import com.example.JwtPrincipal
 import com.example.model.DomainError
+import com.example.model.EmailAlreadyTaken
 import com.example.model.IncorrectPassword
 import com.example.model.InvalidInput
 import com.example.model.UserNotFound
+import com.example.model.UsernameAlreadyTaken
 import com.example.routes.dto.FieldError
 import com.example.routes.dto.InvalidInputResponse
 import com.example.routes.dto.LoginRequest
@@ -31,9 +33,9 @@ fun Route.userRoutes(userService: UserService) {
     post<RegisterUserRequest>(path = "/api/users", builder = registerUserDocs) { req ->
         userService.registerUser(
             RegisterUserCommand(
-                username = req.username,
-                email = req.email,
-                password = req.password
+                username = req.user.username,
+                email = req.user.email,
+                password = req.user.password
             )
         )
             .map { it.toUserResponse() }
@@ -41,7 +43,7 @@ fun Route.userRoutes(userService: UserService) {
     }
 
     post<LoginRequest>(path = "/api/users/login", builder = loginDocs) { req ->
-        userService.login(LoginCommand(email = req.email, password = req.password))
+        userService.login(LoginCommand(email = req.user.email, password = req.user.password))
             .map { it.toUserResponse() }
             .respond(HttpStatusCode.OK)
     }
@@ -72,12 +74,22 @@ private suspend inline fun <reified T : Any> Either<DomainError, T>.respond(stat
 
                     is IncorrectPassword -> call.respond(
                         HttpStatusCode.Unauthorized,
-                        FieldError(fieldName = "credentials", errorMessage = "invalid password")
+                        FieldError(fieldName = "credentials", errorMessage = "invalid")
                     )
 
                     is UserNotFound -> call.respond(
                         HttpStatusCode.NotFound,
                         FieldError(fieldName = it.byProperty, errorMessage = "user not found")
+                    )
+
+                    EmailAlreadyTaken -> call.respond(
+                        HttpStatusCode.Conflict,
+                        FieldError(fieldName = "email", errorMessage = "has already been taken")
+                    )
+
+                    UsernameAlreadyTaken -> call.respond(
+                        HttpStatusCode.Conflict,
+                        FieldError(fieldName = "username", errorMessage = "username already taken")
                     )
                 }
             }

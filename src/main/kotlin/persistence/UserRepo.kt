@@ -1,31 +1,60 @@
 package com.example.persistence
 
+import arrow.core.Either
+import arrow.core.raise.catch
+import arrow.core.raise.either
 import com.example.model.Email
+import com.example.model.EmailAlreadyTaken
 import com.example.model.User
+import com.example.model.UserError
 import com.example.model.UserId
 import com.example.model.Username
+import com.example.model.UsernameAlreadyTaken
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.exceptions.ExposedSQLException
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.postgresql.util.PSQLException
+import org.postgresql.util.PSQLState
 
-@JvmInline value class HashedPassword(val value: String)
+@JvmInline
+value class HashedPassword(val value: String)
 data class UserRecord(val userId: UserId, val user: User, val password: HashedPassword)
 
 
 class UserRepo(val db: Database) {
 
-    fun createUser(username: Username, email: Email, passwordHash: HashedPassword): UserId = transaction(db) {
-        UsersTable.insertAndGetId {
-            it[UsersTable.username] = username.value
-            it[UsersTable.email] = email.value
-            it[UsersTable.password] = passwordHash.value
-        }
-    }.let { UserId(it.value) }
+    fun createUser(
+        username: Username,
+        email: Email,
+        passwordHash: HashedPassword
+    ): Either<UserError, UserId> = either {
+        catch(
+            block = {
+                transaction(db) {
+                    UsersTable.insertAndGetId {
+                        it[UsersTable.username] = username.value
+                        it[UsersTable.email] = email.value
+                        it[UsersTable.password] = passwordHash.value
+                    }
+                }
+            },
+            catch = { ex: ExposedSQLException ->
+                if (ex.sqlState == PSQLState.UNIQUE_VIOLATION.state) {
+                    when ((ex.cause as? PSQLException)?.serverErrorMessage?.constraint) {
+                        "users_email_key" -> raise(EmailAlreadyTaken)
+                        "users_username_key" -> raise(UsernameAlreadyTaken)
+                        else -> throw ex
+                    }
+                } else throw ex
+            }
+        ).let { UserId(it.value) }
+    }
 
     fun getUserById(userId: UserId): User? = transaction(db) {
         UsersTable

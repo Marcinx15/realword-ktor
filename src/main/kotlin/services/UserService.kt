@@ -27,7 +27,7 @@ class UserService(val userRepo: UserRepo, val jwtService: JwtService) {
             username = username,
             email = email,
             passwordHash = hashPassword(plainPassword)
-        )
+        ).bind()
 
         val jwtToken = jwtService.createToken(userId)
 
