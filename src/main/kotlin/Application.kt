@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.example.model.UserId
 import com.example.persistence.UserRepo
+import com.example.routes.dto.FieldError
 import com.example.routes.userRoutes
 import com.example.services.JwtService
 import com.example.services.JwtToken
@@ -17,6 +18,8 @@ import io.github.smiley4.ktoropenapi.config.OutputFormat
 import io.github.smiley4.ktoropenapi.openApi
 import io.github.smiley4.ktoropenapi.route
 import io.github.smiley4.ktorswaggerui.swaggerUI
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
 import io.ktor.http.auth.HttpAuthHeader
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.*
@@ -26,6 +29,7 @@ import io.ktor.server.auth.parseAuthorizationHeader
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
@@ -109,6 +113,15 @@ private fun Application.installAuthentication() {
                 if (userId != null && token != null) JwtPrincipal(userId, JwtToken(token))
                 else null
             }
+            challenge { _, _ ->
+                val authHeader = call.request.headers[HttpHeaders.Authorization]
+                if (authHeader == null) {
+                    call.respond(
+                        HttpStatusCode.Unauthorized,
+                        FieldError("token", "is missing")
+                    )
+                } else call.respond(HttpStatusCode.Unauthorized)
+            }
         }
     }
 }
@@ -153,4 +166,3 @@ data class Configuration(
             )
     }
 }
-
