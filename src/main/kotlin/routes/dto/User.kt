@@ -10,6 +10,18 @@ data class RegisterUserRequest(val user: RegisterUserRequestData) {
 }
 
 @Serializable
+data class UpdateUserRequest(val user: UpdateUserRequestData) {
+    @Serializable
+    data class UpdateUserRequestData(
+        val username: FieldUpdate<String?> = FieldUpdate.Absent,
+        val email: FieldUpdate<String?> = FieldUpdate.Absent,
+        val password: FieldUpdate<String?> = FieldUpdate.Absent,
+        val bio: FieldUpdate<String?> = FieldUpdate.Absent,
+        val image: FieldUpdate<String?> = FieldUpdate.Absent,
+    )
+}
+
+@Serializable
 data class UserResponse(val user: UserResponseData) {
     @Serializable
     data class UserResponseData(

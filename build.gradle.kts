@@ -3,7 +3,6 @@ version = "0.0.1"
 
 val kotlinVersion = "2.3.10"
 val ktorVersion = "3.1.2"
-val logbackVersion = "1.4.14"
 val postgresVersion = "42.7.5"
 val smiley4Version = "5.0.2"
 val exposedVersion = "1.0.0-rc-4"
@@ -11,6 +10,8 @@ val jbcryptVersion = "0.4"
 val flywayVersion = "12.0.2"
 val kotlinxSerializationVersion = "1.10.0"
 val arrowVersion = "2.2.1.1"
+val kotlinLoggingVersion = "8.0.01"
+val logbackVersion = "1.5.32"
 
 
 plugins {
@@ -48,6 +49,8 @@ dependencies {
     implementation("io.ktor:ktor-server-config-yaml")
     implementation("io.ktor:ktor-server-auth")
     implementation("io.ktor:ktor-server-auth-jwt")
+    implementation("io.ktor:ktor-server-call-logging")
+    implementation("io.ktor:ktor-server-status-pages")
     testImplementation("io.ktor:ktor-server-test-host")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-hocon:$kotlinxSerializationVersion")
@@ -60,12 +63,15 @@ dependencies {
 
     implementation("io.arrow-kt:arrow-core:$arrowVersion")
 
-    implementation("ch.qos.logback:logback-classic:$logbackVersion")
+
 
     implementation("io.github.smiley4:ktor-openapi:$smiley4Version")
     implementation("io.github.smiley4:ktor-swagger-ui:$smiley4Version")
 
     implementation("org.mindrot:jbcrypt:${jbcryptVersion}")
+
+    implementation("ch.qos.logback:logback-classic:${logbackVersion}")
+    implementation("io.github.oshai:kotlin-logging:${kotlinLoggingVersion}")
 
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlinVersion")
 

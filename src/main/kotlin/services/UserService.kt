@@ -18,6 +18,7 @@ import com.example.model.Username
 import com.example.model.ValidationError
 import com.example.persistence.HashedPassword
 import com.example.persistence.UserRepo
+import com.example.routes.dto.FieldUpdate
 import org.mindrot.jbcrypt.BCrypt
 
 class UserService(val userRepo: UserRepo, val jwtService: JwtService) {
@@ -54,8 +55,22 @@ class UserService(val userRepo: UserRepo, val jwtService: JwtService) {
         UserWithToken(user = user, token = jwtToken)
     }
 
-    fun getUserData(userId: UserId): Either<UserNotFound, User> = either {
+    fun getUser(userId: UserId): Either<UserNotFound, User> = either {
         ensureNotNull(userRepo.getUserById(userId)) { UserNotFound("userId") }
+    }
+
+    fun updateUser(updateUserCommand: UpdateUserCommand): Either<DomainError, User> = either {
+        val validatedUpdate = updateUserCommand.validate().bind()
+        val updatedUser = userRepo.updateUser(
+            userId = validatedUpdate.userId,
+            username = validatedUpdate.username,
+            email = validatedUpdate.email,
+            password = validatedUpdate.password,
+            bio = validatedUpdate.bio,
+            image = validatedUpdate.image
+        ).bind()
+        ensureNotNull(updatedUser) { UserNotFound("userId") }
+        updatedUser
     }
 
     private fun hashPassword(password: PlainPassword): HashedPassword =
@@ -97,6 +112,53 @@ data class LoginCommand(val email: String, val password: String) {
                 { Email(email).bind() },
                 { PlainPassword(password).bind() }
             ) { a, b -> Pair(a, b) }
+        }
+    }
+}
+
+data class UpdateUserCommand(
+    val userId: UserId,
+    val username: FieldUpdate<String?>,
+    val email: FieldUpdate<String?>,
+    val password: FieldUpdate<String?>,
+    val bio: FieldUpdate<String?>,
+    val image: FieldUpdate<String?>
+) {
+    data class UserUpdate(
+        val userId: UserId,
+        val username: FieldUpdate<Username>,
+        val email: FieldUpdate<Email>,
+        val password: FieldUpdate<PlainPassword>,
+        val bio: FieldUpdate<String?>,
+        val image: FieldUpdate<String?>
+    )
+
+    fun validate(): Either<InvalidInput, UserUpdate> = either {
+        withError(::InvalidInput) {
+            zipOrAccumulate(
+                { userId },
+                {
+                    username.map {
+                        val username = ensureNotNull(it) { Blank("username") }
+                        Username(username).bind()
+                    }
+                },
+                {
+                    email.map {
+                        val email = ensureNotNull(it) { Blank("email") }
+                        Email(email).bind()
+                    }
+                },
+                {
+                    password.map {
+                        val password = ensureNotNull(it) { Blank("password") }
+                        PlainPassword(password).bind()
+                    }
+                },
+                { bio.map { it?.trim()?.ifEmpty { null } } },
+                { image.map { it?.trim()?.ifEmpty { null } } },
+                ::UserUpdate
+            )
         }
     }
 }

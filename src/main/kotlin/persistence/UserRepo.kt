@@ -10,6 +10,9 @@ import com.example.model.UserError
 import com.example.model.UserId
 import com.example.model.Username
 import com.example.model.UsernameAlreadyTaken
+import com.example.routes.dto.FieldUpdate
+import com.example.services.PlainPassword
+import com.example.services.UpdateUserCommand
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
@@ -19,6 +22,8 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
+import org.jetbrains.exposed.v1.jdbc.updateReturning
 import org.postgresql.util.PSQLException
 import org.postgresql.util.PSQLState
 
@@ -41,7 +46,7 @@ class UserRepo(val db: Database) {
                         it[UsersTable.username] = username.value
                         it[UsersTable.email] = email.value
                         it[UsersTable.password] = passwordHash.value
-                    }
+                    }.let { UserId(it.value) }
                 }
             },
             catch = { ex: ExposedSQLException ->
@@ -53,7 +58,39 @@ class UserRepo(val db: Database) {
                     }
                 } else throw ex
             }
-        ).let { UserId(it.value) }
+        )
+    }
+
+    fun updateUser(
+        userId: UserId,
+        username: FieldUpdate<Username>,
+        email: FieldUpdate<Email>,
+        password: FieldUpdate<PlainPassword>,
+        bio: FieldUpdate<String?>,
+        image: FieldUpdate<String?>,
+    ): Either<UserError, User?> = either {
+        catch(
+            block = {
+                transaction(db) {
+                    UsersTable.updateReturning(where = { UsersTable.id eq userId.value }) { statement ->
+                        username.forEach { statement[UsersTable.username] = it.value }
+                        email.forEach { statement[UsersTable.email] = it.value }
+                        password.forEach { statement[UsersTable.password] = it.value }
+                        bio.forEach { statement[UsersTable.bio] = it }
+                        image.forEach { statement[UsersTable.image] = it }
+                    }.singleOrNull()?.toUser()
+                }
+            },
+            catch = { ex: ExposedSQLException ->
+                if (ex.sqlState == PSQLState.UNIQUE_VIOLATION.state) {
+                    when ((ex.cause as? PSQLException)?.serverErrorMessage?.constraint) {
+                        "users_email_key" -> raise(EmailAlreadyTaken)
+                        "users_username_key" -> raise(UsernameAlreadyTaken)
+                        else -> throw ex
+                    }
+                } else throw ex
+            }
+        )
     }
 
     fun getUserById(userId: UserId): User? = transaction(db) {

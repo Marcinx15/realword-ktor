@@ -12,10 +12,12 @@ import com.example.routes.dto.FieldError
 import com.example.routes.dto.InvalidInputResponse
 import com.example.routes.dto.LoginRequest
 import com.example.routes.dto.RegisterUserRequest
+import com.example.routes.dto.UpdateUserRequest
 import com.example.routes.dto.UserResponse
 import com.example.routes.dto.toUserResponse
 import com.example.services.LoginCommand
 import com.example.services.RegisterUserCommand
+import com.example.services.UpdateUserCommand
 import com.example.services.UserService
 import com.example.services.UserWithToken
 
@@ -24,6 +26,7 @@ import io.github.smiley4.ktoropenapi.post
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.routing.Route
 import io.github.smiley4.ktoropenapi.get
+import io.github.smiley4.ktoropenapi.put
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
 import io.ktor.server.response.respond
@@ -53,7 +56,25 @@ fun Route.userRoutes(userService: UserService) {
             val (userId, token) = call.principal<JwtPrincipal>()
                 ?: return@get call.respond(HttpStatusCode.Unauthorized)
 
-            userService.getUserData(userId)
+            userService.getUser(userId)
+                .map { UserWithToken(it, token).toUserResponse() }
+                .respond(HttpStatusCode.OK)
+        }
+
+        put<UpdateUserRequest>(path = "/api/user", builder = updateUserDocs) { req ->
+            val (userId, token) = call.principal<JwtPrincipal>()
+                ?: return@put call.respond(HttpStatusCode.Unauthorized)
+
+            val updateUserCommand = UpdateUserCommand(
+                userId = userId,
+                username = req.user.username,
+                email = req.user.email,
+                password = req.user.password,
+                bio = req.user.bio,
+                image = req.user.image
+            )
+
+            userService.updateUser(updateUserCommand)
                 .map { UserWithToken(it, token).toUserResponse() }
                 .respond(HttpStatusCode.OK)
         }
@@ -89,7 +110,7 @@ private suspend inline fun <reified T : Any> Either<DomainError, T>.respond(stat
 
                     UsernameAlreadyTaken -> call.respond(
                         HttpStatusCode.Conflict,
-                        FieldError(fieldName = "username", errorMessage = "username already taken")
+                        FieldError(fieldName = "username", errorMessage = "username has already taken")
                     )
                 }
             }
@@ -128,6 +149,17 @@ private val loginDocs: RouteConfig.() -> Unit = {
 private val getCurrentUserDocs: RouteConfig.() -> Unit = {
     tags = listOf("user")
     description = "Get current user"
+    response {
+        HttpStatusCode.OK to {
+            description = "Current user"
+            body<UserResponse> {}
+        }
+    }
+}
+
+private val updateUserDocs: RouteConfig.() -> Unit = {
+    tags = listOf("user")
+    description = "Update current user"
     response {
         HttpStatusCode.OK to {
             description = "Current user"
