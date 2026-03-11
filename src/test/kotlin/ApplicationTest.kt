@@ -1,5 +1,6 @@
 package com.example
 
+import com.example.infrastructure.configure
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
@@ -11,7 +12,7 @@ class ApplicationTest {
     @Test
     fun testRoot() = testApplication {
         application {
-            mainModule()
+            configure()
         }
         client.get("/docs").apply {
             assertEquals(HttpStatusCode.OK, status)

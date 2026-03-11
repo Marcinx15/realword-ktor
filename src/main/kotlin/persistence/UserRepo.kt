@@ -12,7 +12,6 @@ import com.example.model.Username
 import com.example.model.UsernameAlreadyTaken
 import com.example.routes.dto.FieldUpdate
 import com.example.services.PlainPassword
-import com.example.services.UpdateUserCommand
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
@@ -22,7 +21,6 @@ import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insertAndGetId
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.updateReturning
 import org.postgresql.util.PSQLException
 import org.postgresql.util.PSQLState
@@ -30,7 +28,6 @@ import org.postgresql.util.PSQLState
 @JvmInline
 value class HashedPassword(val value: String)
 data class UserRecord(val userId: UserId, val user: User, val password: HashedPassword)
-
 
 class UserRepo(val db: Database) {
 

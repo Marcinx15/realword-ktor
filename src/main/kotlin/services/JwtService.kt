@@ -2,7 +2,7 @@ package com.example.services
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import com.example.Configuration
+import com.example.infrastructure.Configuration
 import com.example.model.UserId
 import java.time.Clock
 import java.time.Instant

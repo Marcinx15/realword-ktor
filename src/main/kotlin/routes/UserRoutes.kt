@@ -1,7 +1,7 @@
 package com.example.routes
 
 import arrow.core.Either
-import com.example.JwtPrincipal
+import com.example.infrastructure.JwtPrincipal
 import com.example.model.DomainError
 import com.example.model.EmailAlreadyTaken
 import com.example.model.IncorrectPassword
@@ -13,7 +13,6 @@ import com.example.routes.dto.InvalidInputResponse
 import com.example.routes.dto.LoginRequest
 import com.example.routes.dto.RegisterUserRequest
 import com.example.routes.dto.UpdateUserRequest
-import com.example.routes.dto.UserResponse
 import com.example.routes.dto.toUserResponse
 import com.example.services.LoginCommand
 import com.example.services.RegisterUserCommand
@@ -21,7 +20,6 @@ import com.example.services.UpdateUserCommand
 import com.example.services.UserService
 import com.example.services.UserWithToken
 
-import io.github.smiley4.ktoropenapi.config.RouteConfig
 import io.github.smiley4.ktoropenapi.post
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.routing.Route
@@ -92,78 +90,24 @@ private suspend inline fun <reified T : Any> Either<DomainError, T>.respond(stat
                         HttpStatusCode.UnprocessableEntity,
                         InvalidInputResponse.from(it)
                     )
-
                     is IncorrectPassword -> call.respond(
                         HttpStatusCode.Unauthorized,
                         FieldError(fieldName = "credentials", errorMessage = "invalid")
                     )
-
                     is UserNotFound -> call.respond(
                         HttpStatusCode.NotFound,
                         FieldError(fieldName = it.byProperty, errorMessage = "user not found")
                     )
-
-                    EmailAlreadyTaken -> call.respond(
+                    is EmailAlreadyTaken -> call.respond(
                         HttpStatusCode.Conflict,
                         FieldError(fieldName = "email", errorMessage = "has already been taken")
                     )
-
-                    UsernameAlreadyTaken -> call.respond(
+                    is UsernameAlreadyTaken -> call.respond(
                         HttpStatusCode.Conflict,
                         FieldError(fieldName = "username", errorMessage = "username has already taken")
                     )
                 }
             }
         )
-    }
-}
-
-
-private val registerUserDocs: RouteConfig.() -> Unit = {
-    tags = listOf("user")
-    description = "Register user"
-    request { body<RegisterUserRequest>() }
-    response {
-        HttpStatusCode.Created to {
-            description = "Success"
-            body<UserResponse> {}
-        }
-        HttpStatusCode.BadRequest to {
-            description = "An invalid request"
-        }
-    }
-}
-
-private val loginDocs: RouteConfig.() -> Unit = {
-    tags = listOf("user")
-    description = "Login"
-    request { body<LoginRequest>() }
-    response {
-        HttpStatusCode.OK to {
-            description = "Success"
-            body<UserResponse> {}
-        }
-    }
-}
-
-private val getCurrentUserDocs: RouteConfig.() -> Unit = {
-    tags = listOf("user")
-    description = "Get current user"
-    response {
-        HttpStatusCode.OK to {
-            description = "Current user"
-            body<UserResponse> {}
-        }
-    }
-}
-
-private val updateUserDocs: RouteConfig.() -> Unit = {
-    tags = listOf("user")
-    description = "Update current user"
-    response {
-        HttpStatusCode.OK to {
-            description = "Current user"
-            body<UserResponse> {}
-        }
     }
 }
