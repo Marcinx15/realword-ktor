@@ -2,6 +2,7 @@ package com.example.routes.dto
 
 import com.example.services.UserWithToken
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class RegisterUserRequest(val user: RegisterUserRequestData) {
@@ -10,16 +11,7 @@ data class RegisterUserRequest(val user: RegisterUserRequestData) {
 }
 
 @Serializable
-data class UpdateUserRequest(val user: UpdateUserRequestData) {
-    @Serializable
-    data class UpdateUserRequestData(
-        val username: FieldUpdate<String?> = FieldUpdate.Absent,
-        val email: FieldUpdate<String?> = FieldUpdate.Absent,
-        val password: FieldUpdate<String?> = FieldUpdate.Absent,
-        val bio: FieldUpdate<String?> = FieldUpdate.Absent,
-        val image: FieldUpdate<String?> = FieldUpdate.Absent,
-    )
-}
+data class UpdateUserRequest(val user: JsonObject)
 
 @Serializable
 data class UserResponse(val user: UserResponseData) {

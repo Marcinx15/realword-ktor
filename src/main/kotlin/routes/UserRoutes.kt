@@ -4,6 +4,7 @@ import arrow.core.Either
 import com.example.infrastructure.JwtPrincipal
 import com.example.model.DomainError
 import com.example.model.EmailAlreadyTaken
+import com.example.model.EmptyUpdate
 import com.example.model.IncorrectPassword
 import com.example.model.InvalidInput
 import com.example.model.UserNotFound
@@ -29,8 +30,10 @@ import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
 import io.ktor.server.response.respond
 import io.ktor.server.routing.RoutingContext
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 
-fun Route.userRoutes(userService: UserService) {
+fun Route.userRoutes(userService: UserService, configuredJson: Json) {
     post<RegisterUserRequest>(path = "/api/users", builder = registerUserDocs) { req ->
         userService.registerUser(
             RegisterUserCommand(
@@ -63,13 +66,16 @@ fun Route.userRoutes(userService: UserService) {
             val (userId, token) = call.principal<JwtPrincipal>()
                 ?: return@put call.respond(HttpStatusCode.Unauthorized)
 
+            fun jsonFieldUpdate(fieldName: String) =
+                jsonFieldUpdate(configuredJson, req.user, fieldName, String.serializer())
+
             val updateUserCommand = UpdateUserCommand(
                 userId = userId,
-                username = req.user.username,
-                email = req.user.email,
-                password = req.user.password,
-                bio = req.user.bio,
-                image = req.user.image
+                username = jsonFieldUpdate("username"),
+                email = jsonFieldUpdate("email"),
+                password = jsonFieldUpdate("password"),
+                bio = jsonFieldUpdate("bio"),
+                image = jsonFieldUpdate("image"),
             )
 
             userService.updateUser(updateUserCommand)
@@ -90,21 +96,30 @@ private suspend inline fun <reified T : Any> Either<DomainError, T>.respond(stat
                         HttpStatusCode.UnprocessableEntity,
                         InvalidInputResponse.from(it)
                     )
+
                     is IncorrectPassword -> call.respond(
                         HttpStatusCode.Unauthorized,
                         FieldError(fieldName = "credentials", errorMessage = "invalid")
                     )
+
                     is UserNotFound -> call.respond(
                         HttpStatusCode.NotFound,
                         FieldError(fieldName = it.byProperty, errorMessage = "user not found")
                     )
+
                     is EmailAlreadyTaken -> call.respond(
                         HttpStatusCode.Conflict,
                         FieldError(fieldName = "email", errorMessage = "has already been taken")
                     )
+
                     is UsernameAlreadyTaken -> call.respond(
                         HttpStatusCode.Conflict,
                         FieldError(fieldName = "username", errorMessage = "username has already taken")
+                    )
+
+                    is EmptyUpdate -> call.respond(
+                        HttpStatusCode.UnprocessableEntity,
+                        FieldError(fieldName = "allFields", errorMessage = "update can't be empty")
                     )
                 }
             }

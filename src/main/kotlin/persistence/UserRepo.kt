@@ -3,6 +3,7 @@ package com.example.persistence
 import arrow.core.Either
 import arrow.core.raise.catch
 import arrow.core.raise.either
+import com.example.application.FieldUpdate
 import com.example.model.Email
 import com.example.model.EmailAlreadyTaken
 import com.example.model.User
@@ -10,8 +11,6 @@ import com.example.model.UserError
 import com.example.model.UserId
 import com.example.model.Username
 import com.example.model.UsernameAlreadyTaken
-import com.example.routes.dto.FieldUpdate
-import com.example.services.PlainPassword
 
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
@@ -62,7 +61,7 @@ class UserRepo(val db: Database) {
         userId: UserId,
         username: FieldUpdate<Username>,
         email: FieldUpdate<Email>,
-        password: FieldUpdate<PlainPassword>,
+        hashedPassword: FieldUpdate<HashedPassword>,
         bio: FieldUpdate<String?>,
         image: FieldUpdate<String?>,
     ): Either<UserError, User?> = either {
@@ -72,7 +71,7 @@ class UserRepo(val db: Database) {
                     UsersTable.updateReturning(where = { UsersTable.id eq userId.value }) { statement ->
                         username.forEach { statement[UsersTable.username] = it.value }
                         email.forEach { statement[UsersTable.email] = it.value }
-                        password.forEach { statement[UsersTable.password] = it.value }
+                        hashedPassword.forEach { statement[UsersTable.password] = it.value }
                         bio.forEach { statement[UsersTable.bio] = it }
                         image.forEach { statement[UsersTable.image] = it }
                     }.singleOrNull()?.toUser()

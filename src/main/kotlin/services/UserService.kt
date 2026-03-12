@@ -6,9 +6,11 @@ import arrow.core.raise.ensure
 import arrow.core.raise.ensureNotNull
 import arrow.core.raise.withError
 import arrow.core.raise.zipOrAccumulate
+import com.example.application.FieldUpdate
 import com.example.model.Blank
 import com.example.model.DomainError
 import com.example.model.Email
+import com.example.model.EmptyUpdate
 import com.example.model.IncorrectPassword
 import com.example.model.InvalidInput
 import com.example.model.User
@@ -18,8 +20,8 @@ import com.example.model.Username
 import com.example.model.ValidationError
 import com.example.persistence.HashedPassword
 import com.example.persistence.UserRepo
-import com.example.routes.dto.FieldUpdate
 import org.mindrot.jbcrypt.BCrypt
+import kotlin.collections.listOf
 
 class UserService(val userRepo: UserRepo, val jwtService: JwtService) {
     fun registerUser(registerUserCommand: RegisterUserCommand): Either<DomainError, UserWithToken> = either {
@@ -65,7 +67,7 @@ class UserService(val userRepo: UserRepo, val jwtService: JwtService) {
             userId = validatedUpdate.userId,
             username = validatedUpdate.username,
             email = validatedUpdate.email,
-            password = validatedUpdate.password,
+            hashedPassword = validatedUpdate.password.map { hashPassword(it) },
             bio = validatedUpdate.bio,
             image = validatedUpdate.image
         ).bind()
@@ -133,7 +135,11 @@ data class UpdateUserCommand(
         val image: FieldUpdate<String?>
     )
 
-    fun validate(): Either<InvalidInput, UserUpdate> = either {
+    fun validate(): Either<DomainError, UserUpdate> = either {
+        ensure(
+            !listOf(username, email, password, bio, image).all { it is FieldUpdate.Absent }
+        ) { EmptyUpdate }
+
         withError(::InvalidInput) {
             zipOrAccumulate(
                 { userId },

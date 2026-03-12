@@ -40,13 +40,17 @@ private fun Application.configureRouting() {
     routing {
         route(path = "api") { openApi() }
         route(path = "docs") { swaggerUI(openApiUrl = "/api") }
-        userRoutes(Dependencies.userService)
+        userRoutes(Dependencies.userService, globalJson)
     }
 }
 
+private val globalJson = Json {
+    explicitNulls = true
+    ignoreUnknownKeys = false
+}
 
 private fun Application.installContentNegotiation() {
-    install(ContentNegotiation) { json(Json { explicitNulls = true }) }
+    install(ContentNegotiation) { json(globalJson) }
 }
 
 private fun Application.installCallLogging() {
