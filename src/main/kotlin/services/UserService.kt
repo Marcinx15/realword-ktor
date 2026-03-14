@@ -7,6 +7,7 @@ import arrow.core.raise.ensureNotNull
 import arrow.core.raise.withError
 import arrow.core.raise.zipOrAccumulate
 import com.example.application.FieldUpdate
+import com.example.application.HashedPassword
 import com.example.model.Blank
 import com.example.model.DomainError
 import com.example.model.Email
@@ -18,7 +19,6 @@ import com.example.model.UserId
 import com.example.model.UserNotFound
 import com.example.model.Username
 import com.example.model.ValidationError
-import com.example.persistence.HashedPassword
 import com.example.persistence.UserRepo
 import org.mindrot.jbcrypt.BCrypt
 import kotlin.collections.listOf

@@ -4,6 +4,7 @@ import arrow.core.Either
 import arrow.core.raise.catch
 import arrow.core.raise.either
 import com.example.application.FieldUpdate
+import com.example.application.HashedPassword
 import com.example.model.Email
 import com.example.model.EmailAlreadyTaken
 import com.example.model.User
@@ -24,8 +25,6 @@ import org.jetbrains.exposed.v1.jdbc.updateReturning
 import org.postgresql.util.PSQLException
 import org.postgresql.util.PSQLState
 
-@JvmInline
-value class HashedPassword(val value: String)
 data class UserRecord(val userId: UserId, val user: User, val password: HashedPassword)
 
 class UserRepo(val db: Database) {
