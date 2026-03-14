@@ -1,7 +1,6 @@
 package com.example.infrastructure
 
 import com.example.persistence.UserRepo
-import com.example.services.JwtService
 import com.example.services.UserService
 import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.v1.jdbc.Database

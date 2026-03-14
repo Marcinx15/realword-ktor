@@ -8,6 +8,8 @@ import arrow.core.raise.withError
 import arrow.core.raise.zipOrAccumulate
 import com.example.application.FieldUpdate
 import com.example.application.HashedPassword
+import com.example.infrastructure.JwtService
+import com.example.infrastructure.JwtToken
 import com.example.model.Blank
 import com.example.model.DomainError
 import com.example.model.Email
