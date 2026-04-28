@@ -126,3 +126,4 @@ object UsersTable : IntIdTable(name = "users") {
     val bio = text(name = "bio").nullable()
     val image = text(name = "image").nullable()
 }
+
